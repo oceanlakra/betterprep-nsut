@@ -7,7 +7,6 @@ import { supabase } from './lib/supabase'
 import Dashboard from './pages/Dashboard'
 import BranchView from './pages/BranchView'
 import SubjectView from './pages/SubjectView'
-import UnitView from './pages/UnitView'
 import { useNavigationRefresh } from '@/hooks/use-navigation'
 
 function AppRoutes() {
@@ -16,13 +15,14 @@ function AppRoutes() {
   useNavigationRefresh()
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+    const fetchSession = async () => {
+      const { data: { session: initialSession } } = await supabase.auth.getSession()
       setSession(initialSession)
       setLoading(false)
-    })
+    }
 
-    // Listen for auth changes
+    fetchSession()
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
     })
@@ -40,7 +40,6 @@ function AppRoutes() {
       <Route path="/" element={<Home />} />
       <Route path="/branch/:branchId" element={<BranchView />} />
       <Route path="/subject/:subjectId" element={<SubjectView />} />
-      <Route path="/unit/:unitId" element={<UnitView />} />
       <Route 
         path="/auth" 
         element={

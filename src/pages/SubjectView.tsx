@@ -1,84 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { supabase } from '@/lib/supabase';
+import { Card, CardContent } from '@/components/ui/card';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { useAppDispatch, useAppSelector } from '@/hooks';
+import { fetchSubjectData } from '@/features/subjectSlice';
 import { ChevronLeft } from 'lucide-react';
-
-interface Subject {
-  id: string;
-  name: string;
-  semester_id: string;
-}
-
-interface Unit {
-  id: string;
-  name: string;
-  order_no: number;
-  subject_id: string;
-}
-
-interface Topic {
-  id: string;
-  title: string;
-  unit_id: string;
-  video_links: string[];
-  pdf_path: string;
-}
+import { Checkbox } from '@/components/ui/checkbox';
+import { Youtube, FileText } from 'lucide-react';
 
 export default function SubjectView() {
   const { subjectId } = useParams();
-  const [subject, setSubject] = useState<Subject | null>(null);
-  const [units, setUnits] = useState<Unit[]>([]);
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const { subject, loading, error } = useAppSelector((state) => state.subject);
 
   useEffect(() => {
-    async function fetchSubjectData() {
-      try {
-        // Fetch subject details
-        const { data: subjectData, error: subjectError } = await supabase
-          .from('subjects')
-          .select('*')
-          .eq('id', subjectId)
-          .single();
-
-        if (subjectError) throw subjectError;
-        setSubject(subjectData);
-
-        // Fetch units for this subject
-        const { data: unitData, error: unitError } = await supabase
-          .from('units')
-          .select('*')
-          .eq('subject_id', subjectId)
-          .order('order_no');
-
-        if (unitError) throw unitError;
-        setUnits(unitData || []);
-
-        // Fetch topics for all units
-        if (unitData && unitData.length > 0) {
-          const { data: topicData, error: topicError } = await supabase
-            .from('topics')
-            .select('*')
-            .in('unit_id', unitData.map(unit => unit.id))
-            .order('title');
-
-          if (topicError) throw topicError;
-          setTopics(topicData || []);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch subject data');
-        console.error('Error:', err);
-      } finally {
-        setLoading(false);
-      }
+    if (subjectId) {
+      console.log('Fetching subject data for ID:', subjectId);
+      dispatch(fetchSubjectData(subjectId));
     }
-
-    fetchSubjectData();
-  }, [subjectId]);
+  }, [subjectId, dispatch]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -102,35 +43,43 @@ export default function SubjectView() {
             {error}
           </div>
         ) : loading ? (
-          <div className="grid gap-4">
-            {Array(3).fill(0).map((_, i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-6 w-1/3" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-4 w-2/3" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <div>Loading...</div>
         ) : (
-          <div className="space-y-8">
-            {units.map(unit => (
-              <Card key={unit.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <CardTitle>Unit {unit.order_no}: {unit.name}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Button asChild>
-                    <Link to={`/unit/${unit.id}`}>
-                      View Topics
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
+          <Accordion type="single" collapsible>
+            {subject?.units.map(unit => (
+              <AccordionItem key={unit.id} value={unit.id}>
+                <AccordionTrigger>
+                  <div className="flex justify-between items-center p-4 cursor-pointer bg-gray-100 hover:bg-gray-200">
+                    <h2 className="font-semibold">Unit {unit.order_no}: {unit.name}</h2>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <Card className="p-4">
+                    <div className="mt-4 space-y-3">
+                      {unit.topics.map(topic => (
+                        <div key={topic.id} className="flex items-center justify-between border-b py-2">
+                          <Checkbox className="mr-2" />
+                          <span className="flex-1 text-sm">{topic.title}</span>
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link to={topic.video_links[0]} target="_blank">
+                              <Youtube className="h-5 w-5" />
+                            </Link>
+                          </Button>
+                          {topic.pdf_path && (
+                            <Button variant="ghost" size="icon" asChild>
+                              <Link to={topic.pdf_path} target="_blank">
+                                <FileText className="h-5 w-5" />
+                              </Link>
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </AccordionContent>
+              </AccordionItem>
             ))}
-          </div>
+          </Accordion>
         )}
       </main>
     </div>

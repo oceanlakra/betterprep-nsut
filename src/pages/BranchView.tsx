@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/lib/supabase';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigationRefresh } from '@/hooks/use-navigation';
+import ProgressBar from '@/components/ProgressBar';
 
 interface Semester {
   id: string;
@@ -18,6 +19,7 @@ interface Subject {
   id: string;
   name: string;
   semester_id: string;
+  progress: number;
 }
 
 export default function BranchView() {
@@ -170,16 +172,17 @@ export default function BranchView() {
                   {subjects
                     .filter(subject => subject.semester_id === selectedSemester.id)
                     .map(subject => (
-                      <Card key={subject.id} className="hover:shadow-md transition-shadow">
+                      <Card key={subject.id} className="hover:shadow-md transition-shadow relative">
                         <CardHeader>
                           <CardTitle>{subject.name}</CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="flex justify-between items-center">
                           <Button asChild>
                             <Link to={`/subject/${subject.id}`}>
                               View Units
                             </Link>
                           </Button>
+                          <ProgressBar progress={subject.progress} className="ml-2" />
                         </CardContent>
                       </Card>
                     ))}
